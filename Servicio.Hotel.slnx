@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path=".gitignore" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="Servicio.Hotel.API/Servicio.Hotel.API.csproj" Id="14060017-33a0-4b44-bda8-01c26e222010" />
+    <Project Path="Servicio.Hotel.Business/Servicio.Hotel.Business.csproj" />
+    <Project Path="Servicio.Hotel.DataAccess/Servicio.Hotel.DataAccess.csproj" />
+    <Project Path="Servicio.Hotel.DataManagement/Servicio.Hotel.DataManagement.csproj" />
+  </Folder>
+  <Folder Name="/tests/" />
+</Solution>
