@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Servicio.Hotel.Business.DTOs.Alojamiento
 {
     public class TipoHabitacionUpdateDTO
@@ -14,5 +16,6 @@ namespace Servicio.Hotel.Business.DTOs.Alojamiento
         public bool PermiteEventos { get; set; }
         public bool PermiteReservaPublica { get; set; }
         public string EstadoTipoHabitacion { get; set; } = "ACT";
+        public List<ImagenDTO>? Imagenes { get; set; }
     }
 }

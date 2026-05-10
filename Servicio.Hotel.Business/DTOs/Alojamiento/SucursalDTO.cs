@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Servicio.Hotel.Business.DTOs.Alojamiento
 {
@@ -42,5 +43,6 @@ namespace Servicio.Hotel.Business.DTOs.Alojamiento
         public string ModificacionIp { get; set; } = string.Empty;
         public string ServicioOrigen { get; set; } = string.Empty;
         public byte[]? RowVersion { get; set; }
+        public List<ImagenDTO> Imagenes { get; set; } = new();
     }
 }

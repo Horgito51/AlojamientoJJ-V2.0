@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Servicio.Hotel.Business.DTOs.Alojamiento
 {
     public class SucursalUpdateDTO
@@ -29,5 +31,6 @@ namespace Servicio.Hotel.Business.DTOs.Alojamiento
         public bool PermiteMascotas { get; set; }
         public bool SePermiteFumar { get; set; }
         public string EstadoSucursal { get; set; } = "ACT";
+        public List<ImagenDTO>? Imagenes { get; set; }
     }
 }

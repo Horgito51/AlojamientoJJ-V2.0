@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace Servicio.Hotel.DataManagement.Alojamiento.Models
 {
@@ -25,5 +26,6 @@ namespace Servicio.Hotel.DataManagement.Alojamiento.Models
         public string ModificacionIp { get; set; }
         public string ServicioOrigen { get; set; }
         public byte[] RowVersion { get; set; }
+        public List<ImagenDataModel> Imagenes { get; set; } = new();
     }
 }

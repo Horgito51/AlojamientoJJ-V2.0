@@ -15,16 +15,16 @@ namespace Servicio.Hotel.DataAccess.Repositories.Alojamiento
         public TipoHabitacionRepository(ServicioHotelDbContext context) : base(context) { }
 
         public async Task<TipoHabitacionEntity?> GetByIdAsync(int id, CancellationToken ct = default)
-            => await base.GetByIdAsync(id, ct);
+            => await _dbSet.Include(th => th.TipoHabitacionImagenes).FirstOrDefaultAsync(th => th.IdTipoHabitacion == id, ct);
 
         public async Task<TipoHabitacionEntity?> GetByGuidAsync(Guid guid, CancellationToken ct = default)
-            => await _dbSet.FirstOrDefaultAsync(th => th.TipoHabitacionGuid == guid, ct);
+            => await _dbSet.Include(th => th.TipoHabitacionImagenes).FirstOrDefaultAsync(th => th.TipoHabitacionGuid == guid, ct);
 
         public async Task<TipoHabitacionEntity?> GetBySlugAsync(string slug, CancellationToken ct = default)
-            => await _dbSet.FirstOrDefaultAsync(th => th.Slug == slug, ct);
+            => await _dbSet.Include(th => th.TipoHabitacionImagenes).FirstOrDefaultAsync(th => th.Slug == slug, ct);
 
         public async Task<IEnumerable<TipoHabitacionEntity>> GetAllAsync(CancellationToken ct = default)
-            => await base.GetAllAsync(ct);
+            => await _dbSet.Include(th => th.TipoHabitacionImagenes).ToListAsync(ct);
 
         public async Task<TipoHabitacionEntity> AddAsync(TipoHabitacionEntity entity, CancellationToken ct = default)
             => await base.AddAsync(entity, ct);
@@ -42,7 +42,10 @@ namespace Servicio.Hotel.DataAccess.Repositories.Alojamiento
             => await _dbSet.AnyAsync(th => th.Slug == slug, ct);
         public async Task<IEnumerable<TipoHabitacionEntity>> GetPublicosAsync(CancellationToken ct = default)
         {
-            return await _dbSet.Where(th => th.PermiteReservaPublica && th.EstadoTipoHabitacion == "ACT").ToListAsync(ct);
+            return await _dbSet
+                .Include(th => th.TipoHabitacionImagenes)
+                .Where(th => th.PermiteReservaPublica && th.EstadoTipoHabitacion == "ACT")
+                .ToListAsync(ct);
         }
     }
 }

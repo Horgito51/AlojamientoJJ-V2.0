@@ -14,13 +14,13 @@ namespace Servicio.Hotel.DataAccess.Repositories.Alojamiento
         public SucursalRepository(ServicioHotelDbContext context) : base(context) { }
 
         public async Task<SucursalEntity?> GetByIdAsync(int id, CancellationToken ct = default)
-            => await base.GetByIdAsync(id, ct);
+            => await _dbSet.Include(s => s.Imagenes).FirstOrDefaultAsync(s => s.IdSucursal == id, ct);
 
         public async Task<SucursalEntity?> GetByGuidAsync(Guid guid, CancellationToken ct = default)
-            => await _dbSet.FirstOrDefaultAsync(s => s.SucursalGuid == guid, ct);
+            => await _dbSet.Include(s => s.Imagenes).FirstOrDefaultAsync(s => s.SucursalGuid == guid, ct);
 
         public async Task<IEnumerable<SucursalEntity>> GetAllAsync(CancellationToken ct = default)
-            => await base.GetAllAsync(ct);
+            => await _dbSet.Include(s => s.Imagenes).ToListAsync(ct);
 
         public async Task<SucursalEntity> AddAsync(SucursalEntity entity, CancellationToken ct = default)
             => await base.AddAsync(entity, ct);
@@ -32,7 +32,7 @@ namespace Servicio.Hotel.DataAccess.Repositories.Alojamiento
             => await base.DeleteAsync(id, ct);
 
         public async Task<SucursalEntity?> GetByCodigoAsync(string codigo, CancellationToken ct = default)
-            => await _dbSet.FirstOrDefaultAsync(s => s.CodigoSucursal == codigo, ct);
+            => await _dbSet.Include(s => s.Imagenes).FirstOrDefaultAsync(s => s.CodigoSucursal == codigo, ct);
 
         public async Task UpdatePoliticasAsync(int id, SucursalEntity politicas, CancellationToken ct = default)
         {

@@ -82,7 +82,8 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                         SucursalGuid = sucursal?.SucursalGuid ?? Guid.Empty,
                         TipoHabitacionGuid = tipo?.TipoHabitacionGuid ?? Guid.Empty,
                         TipoHabitacionSlug = tipo?.Slug ?? string.Empty,
-                        ImagenUrl = h.Url
+                        ImagenUrl = h.Imagenes.FirstOrDefault(i => i.EsPrincipal)?.UrlImagen ?? h.Url,
+                        Imagenes = h.Imagenes.Select(i => i.ToPublicDto()).ToList()
                     };
                 });
 
@@ -117,7 +118,8 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                 SucursalGuid = sucursal.SucursalGuid,
                 TipoHabitacionGuid = tipo.TipoHabitacionGuid,
                 TipoHabitacionSlug = tipo.Slug,
-                ImagenUrl = habitacion.Url
+                ImagenUrl = habitacion.Imagenes.FirstOrDefault(i => i.EsPrincipal)?.UrlImagen ?? habitacion.Url,
+                Imagenes = habitacion.Imagenes.Select(i => i.ToPublicDto()).ToList()
             };
 
             return Ok(dto);

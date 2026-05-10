@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using Servicio.Hotel.API.Models.Responses.Public;
 
 namespace Servicio.Hotel.API.Models.Responses.Internal
 {
@@ -14,6 +16,7 @@ namespace Servicio.Hotel.API.Models.Responses.Internal
         public string EstadoHabitacion { get; set; } = string.Empty;
         public Guid SucursalGuid { get; set; }
         public TipoHabitacionRef TipoHabitacion { get; set; } = new();
+        public List<ImagenPublicDto> Imagenes { get; set; } = new();
     }
 
     public sealed class TipoHabitacionRef

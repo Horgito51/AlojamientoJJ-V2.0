@@ -100,6 +100,9 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
     {
         public int IdCliente { get; set; }
         public int IdSucursal { get; set; }
+        public Guid? ClienteGuid { get; set; }
+        public Guid? SucursalGuid { get; set; }
+        public ClienteCreateRequest? Cliente { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime FechaFin { get; set; }
         public decimal SubtotalReserva { get; set; }
@@ -123,6 +126,8 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
     public class ReservaHabitacionCreateRequest
     {
         public int IdHabitacion { get; set; }
+        public Guid? TipoHabitacionGuid { get; set; }
+        public int NumHabitaciones { get; set; } = 1;
         public int? IdTarifa { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime FechaFin { get; set; }
@@ -224,6 +229,7 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
         public bool PermiteEventos { get; set; }
         public bool PermiteReservaPublica { get; set; }
         public string EstadoTipoHabitacion { get; set; } = "ACT";
+        public List<ImagenRequest>? Imagenes { get; set; }
     }
 
     public class SucursalUpsertRequest
@@ -254,6 +260,16 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
         public bool PermiteMascotas { get; set; }
         public bool SePermiteFumar { get; set; }
         public string EstadoSucursal { get; set; } = "ACT";
+        public List<ImagenRequest>? Imagenes { get; set; }
+    }
+
+    public class ImagenRequest
+    {
+        public Guid? ImagenGuid { get; set; }
+        public string UrlImagen { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public int Orden { get; set; }
+        public bool EsPrincipal { get; set; }
     }
 
     public class SucursalPoliticasPatchRequest
@@ -575,7 +591,15 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
                 AreaM2 = request.AreaM2,
                 PermiteEventos = request.PermiteEventos,
                 PermiteReservaPublica = request.PermiteReservaPublica,
-                EstadoTipoHabitacion = request.EstadoTipoHabitacion
+                EstadoTipoHabitacion = request.EstadoTipoHabitacion,
+                Imagenes = request.Imagenes?.Select(i => new ImagenDTO
+                {
+                    ImagenGuid = i.ImagenGuid ?? Guid.Empty,
+                    UrlImagen = i.UrlImagen,
+                    Descripcion = i.Descripcion,
+                    Orden = i.Orden,
+                    EsPrincipal = i.EsPrincipal
+                }).ToList()
             };
 
         public static Servicio.Hotel.Business.DTOs.Alojamiento.TipoHabitacionUpdateDTO ToUpdateDto(this TipoHabitacionUpsertRequest request, int id)
@@ -592,7 +616,15 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
                 AreaM2 = request.AreaM2,
                 PermiteEventos = request.PermiteEventos,
                 PermiteReservaPublica = request.PermiteReservaPublica,
-                EstadoTipoHabitacion = request.EstadoTipoHabitacion
+                EstadoTipoHabitacion = request.EstadoTipoHabitacion,
+                Imagenes = request.Imagenes?.Select(i => new ImagenDTO
+                {
+                    ImagenGuid = i.ImagenGuid ?? Guid.Empty,
+                    UrlImagen = i.UrlImagen,
+                    Descripcion = i.Descripcion,
+                    Orden = i.Orden,
+                    EsPrincipal = i.EsPrincipal
+                }).ToList()
             };
 
         public static Servicio.Hotel.Business.DTOs.Alojamiento.SucursalCreateDTO ToCreateDto(this SucursalUpsertRequest request)
@@ -623,7 +655,15 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
                 EdadMinimaHuesped = request.EdadMinimaHuesped,
                 PermiteMascotas = request.PermiteMascotas,
                 SePermiteFumar = request.SePermiteFumar,
-                EstadoSucursal = request.EstadoSucursal
+                EstadoSucursal = request.EstadoSucursal,
+                Imagenes = request.Imagenes?.Select(i => new ImagenDTO
+                {
+                    ImagenGuid = i.ImagenGuid ?? Guid.Empty,
+                    UrlImagen = i.UrlImagen,
+                    Descripcion = i.Descripcion,
+                    Orden = i.Orden,
+                    EsPrincipal = i.EsPrincipal
+                }).ToList()
             };
 
         public static Servicio.Hotel.Business.DTOs.Alojamiento.SucursalPoliticasUpdateDTO ToDto(this SucursalPoliticasPatchRequest request)
@@ -667,7 +707,15 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
                 EdadMinimaHuesped = request.EdadMinimaHuesped,
                 PermiteMascotas = request.PermiteMascotas,
                 SePermiteFumar = request.SePermiteFumar,
-                EstadoSucursal = request.EstadoSucursal
+                EstadoSucursal = request.EstadoSucursal,
+                Imagenes = request.Imagenes?.Select(i => new ImagenDTO
+                {
+                    ImagenGuid = i.ImagenGuid ?? Guid.Empty,
+                    UrlImagen = i.UrlImagen,
+                    Descripcion = i.Descripcion,
+                    Orden = i.Orden,
+                    EsPrincipal = i.EsPrincipal
+                }).ToList()
             };
 
         public static Servicio.Hotel.Business.DTOs.Alojamiento.CatalogoServicioCreateDTO ToCreateDto(this CatalogoServicioUpsertRequest request)

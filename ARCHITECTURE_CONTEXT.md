@@ -187,7 +187,6 @@ Rutas existentes relevantes:
 
 - `/api/v1/accommodations/search`
 - `/api/v1/accommodations/{habitacionGuid}`
-- `/api/v1/accommodations/categories`
 - `/api/v1/accommodations/{habitacionGuid}/reviews`
 - `/api/v1/public/reservas`
 - `/api/v1/public/reservas/{reservaGuid}`

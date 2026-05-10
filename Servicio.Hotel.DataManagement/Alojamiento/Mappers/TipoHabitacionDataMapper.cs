@@ -36,7 +36,8 @@ namespace Servicio.Hotel.DataManagement.Alojamiento.Mappers
                 FechaModificacionUtc = entity.FechaModificacionUtc,
                 ModificacionIp = entity.ModificacionIp,
                 ServicioOrigen = entity.ServicioOrigen,
-                RowVersion = entity.RowVersion
+                RowVersion = entity.RowVersion,
+                Imagenes = entity.TipoHabitacionImagenes.ToTipoImagenModelList()
             };
         }
 

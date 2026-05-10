@@ -29,6 +29,6 @@ namespace Servicio.Hotel.Business.DTOs.Alojamiento
         public string ModificacionIp { get; set; }
         public string ServicioOrigen { get; set; }
         public byte[] RowVersion { get; set; }
-        // Opcional: lista de IDs de amenidades o servicios, pero se puede omitir
+        public List<ImagenDTO> Imagenes { get; set; } = new();
     }
 }

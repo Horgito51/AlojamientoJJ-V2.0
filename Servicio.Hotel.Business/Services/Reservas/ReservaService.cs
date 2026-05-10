@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Servicio.Hotel.Business.Common;
 using Servicio.Hotel.Business.DTOs.Reservas;
 using Servicio.Hotel.Business.Exceptions;
@@ -11,6 +12,8 @@ using Servicio.Hotel.Business.Interfaces.Facturacion;
 using Servicio.Hotel.Business.Interfaces.Reservas;
 using Servicio.Hotel.Business.Mappers.Reservas;
 using Servicio.Hotel.Business.Validators.Reservas;
+using Servicio.Hotel.DataAccess.Context;
+using Servicio.Hotel.DataAccess.Entities.Alojamiento;
 using Servicio.Hotel.DataManagement.UnitOfWork;
 using Servicio.Hotel.DataManagement.Reservas.Interfaces;
 
@@ -21,21 +24,27 @@ namespace Servicio.Hotel.Business.Services.Reservas
         private readonly IReservaDataService _reservaDataService;
         private readonly ITarifaService _tarifaService;
         private readonly IHabitacionService _habitacionService;
+        private readonly ITipoHabitacionService _tipoHabitacionService;
         private readonly IFacturaService _facturaService;
         private readonly IUnitOfWork _unitOfWork;
+        private readonly ServicioHotelDbContext _context;
 
         public ReservaService(
             IReservaDataService reservaDataService,
             ITarifaService tarifaService,
             IHabitacionService habitacionService,
+            ITipoHabitacionService tipoHabitacionService,
             IFacturaService facturaService,
-            IUnitOfWork unitOfWork)
+            IUnitOfWork unitOfWork,
+            ServicioHotelDbContext context)
         {
             _reservaDataService = reservaDataService;
             _tarifaService = tarifaService;
             _habitacionService = habitacionService;
+            _tipoHabitacionService = tipoHabitacionService;
             _facturaService = facturaService;
             _unitOfWork = unitOfWork;
+            _context = context;
         }
 
         public async Task<ReservaDTO> GetByIdAsync(int id, CancellationToken ct = default)
@@ -128,6 +137,75 @@ namespace Servicio.Hotel.Business.Services.Reservas
             var dataModel = reservaDto.ToDataModel();
             var created = await _reservaDataService.AddAsync(dataModel, ct);
             return created.ToDto();
+        }
+
+        public async Task<ReservaDTO> CreateByTipoHabitacionAsync(ReservaPorTipoHabitacionCreateDTO reservaCreateDto, CancellationToken ct = default)
+        {
+            ValidateReservaPorTipoHabitacion(reservaCreateDto);
+
+            ReservaDTO? created = null;
+            await _unitOfWork.ExecuteInTransactionAsync(async () =>
+            {
+                var detalles = new List<ReservaHabitacionDTO>();
+
+                foreach (var request in reservaCreateDto.Habitaciones)
+                {
+                    var tipo = await _tipoHabitacionService.GetByGuidAsync(request.TipoHabitacionGuid, ct);
+                    if (tipo.IdTipoHabitacion <= 0)
+                        throw new ValidationException("RES-TIPO-005", "tipoHabitacionGuid no es valido.");
+
+                    if (!string.Equals(tipo.EstadoTipoHabitacion, "ACT", StringComparison.OrdinalIgnoreCase) ||
+                        (reservaCreateDto.ExigirPermiteReservaPublica && !tipo.PermiteReservaPublica))
+                        throw new ValidationException("RES-TIPO-006", $"El tipo de habitacion {request.TipoHabitacionGuid} no permite reserva publica.");
+
+                    if (request.NumAdultos > tipo.CapacidadAdultos || request.NumNinos > tipo.CapacidadNinos)
+                        throw new ValidationException("RES-TIPO-007", $"La capacidad solicitada excede el tipo de habitacion {tipo.NombreTipoHabitacion}.");
+
+                    var habitacionesAsignadas = await GetHabitacionesDisponiblesForUpdateAsync(
+                        reservaCreateDto.IdSucursal,
+                        tipo.IdTipoHabitacion,
+                        request.NumHabitaciones,
+                        reservaCreateDto.FechaInicio,
+                        reservaCreateDto.FechaFin,
+                        ct);
+
+                    if (habitacionesAsignadas.Count < request.NumHabitaciones)
+                    {
+                        throw new ConflictException(
+                            $"No hay suficientes habitaciones disponibles para el tipo {tipo.NombreTipoHabitacion}. Solicitadas: {request.NumHabitaciones}, disponibles: {habitacionesAsignadas.Count}.");
+                    }
+
+                    detalles.AddRange(habitacionesAsignadas.Select(h => new ReservaHabitacionDTO
+                    {
+                        IdHabitacion = h.IdHabitacion,
+                        FechaInicio = reservaCreateDto.FechaInicio,
+                        FechaFin = reservaCreateDto.FechaFin,
+                        NumAdultos = request.NumAdultos,
+                        NumNinos = request.NumNinos,
+                        EstadoDetalle = "PEN"
+                    }));
+                }
+
+                var createDto = new ReservaCreateDTO
+                {
+                    IdCliente = reservaCreateDto.IdCliente,
+                    IdSucursal = reservaCreateDto.IdSucursal,
+                    FechaInicio = reservaCreateDto.FechaInicio,
+                    FechaFin = reservaCreateDto.FechaFin,
+                    DescuentoAplicado = reservaCreateDto.DescuentoAplicado,
+                    OrigenCanalReserva = string.IsNullOrWhiteSpace(reservaCreateDto.OrigenCanalReserva)
+                        ? "MARKETPLACE"
+                        : reservaCreateDto.OrigenCanalReserva,
+                    EstadoReserva = "PEN",
+                    Observaciones = reservaCreateDto.Observaciones ?? string.Empty,
+                    EsWalkin = reservaCreateDto.EsWalkin,
+                    Habitaciones = detalles
+                };
+
+                created = await CreateAsync(createDto, ct);
+            }, ct);
+
+            return created!;
         }
 
         public async Task<ReservaPrecioDTO> CalcularPrecioHabitacionAsync(int idHabitacion, DateTime fechaInicio, DateTime fechaFin, string? canal = null, CancellationToken ct = default)
@@ -310,6 +388,62 @@ namespace Servicio.Hotel.Business.Services.Reservas
             var estado = (habitacion.EstadoHabitacion ?? string.Empty).Trim().ToUpperInvariant();
             if (estado is "MNT" or "FDS" or "OCU" or "INA")
                 throw new ConflictException($"La habitacion {habitacion.IdHabitacion} no esta disponible para reservar. Estado actual: {estado}.");
+        }
+
+        private static void ValidateReservaPorTipoHabitacion(ReservaPorTipoHabitacionCreateDTO reserva)
+        {
+            if (reserva.IdCliente <= 0)
+                throw new ValidationException("RES-TIPO-001", "IdCliente es obligatorio.");
+            if (reserva.IdSucursal <= 0)
+                throw new ValidationException("RES-TIPO-002", "IdSucursal es obligatorio.");
+            if (reserva.FechaFin <= reserva.FechaInicio)
+                throw new ValidationException("RES-TIPO-003", "La fecha de fin debe ser posterior a la fecha de inicio.");
+            if (reserva.Habitaciones == null || reserva.Habitaciones.Count == 0)
+                throw new ValidationException("RES-TIPO-004", "Toda reserva debe solicitar al menos un tipo de habitacion.");
+
+            foreach (var item in reserva.Habitaciones)
+            {
+                if (item.TipoHabitacionGuid == Guid.Empty)
+                    throw new ValidationException("RES-TIPO-008", "tipoHabitacionGuid es obligatorio.");
+                if (item.NumHabitaciones <= 0)
+                    throw new ValidationException("RES-TIPO-009", "numHabitaciones debe ser mayor a cero.");
+                if (item.NumAdultos <= 0)
+                    throw new ValidationException("RES-TIPO-010", "numAdultos debe ser mayor a cero.");
+                if (item.NumNinos < 0)
+                    throw new ValidationException("RES-TIPO-011", "numNinos no puede ser negativo.");
+            }
+        }
+
+        private async Task<List<HabitacionEntity>> GetHabitacionesDisponiblesForUpdateAsync(
+            int idSucursal,
+            int idTipoHabitacion,
+            int cantidad,
+            DateTime fechaInicio,
+            DateTime fechaFin,
+            CancellationToken ct)
+        {
+            return await _context.Habitaciones
+                .FromSqlInterpolated($@"
+                    SELECT TOP({cantidad}) h.*
+                    FROM booking.HABITACION AS h WITH (UPDLOCK, HOLDLOCK, ROWLOCK)
+                    WHERE h.id_sucursal = {idSucursal}
+                        AND h.id_tipo_habitacion = {idTipoHabitacion}
+                        AND h.estado_habitacion = 'DIS'
+                        AND h.es_eliminado = 0
+                        AND NOT EXISTS (
+                            SELECT 1
+                            FROM booking.RESERVAS_HABITACIONES AS rh WITH (UPDLOCK, HOLDLOCK)
+                            INNER JOIN booking.RESERVAS AS r WITH (UPDLOCK, HOLDLOCK)
+                                ON r.id_reserva = rh.id_reserva
+                            WHERE rh.id_habitacion = h.id_habitacion
+                                AND r.estado_reserva IN ('PEN', 'CON')
+                                AND rh.estado_detalle IN ('PEN', 'CON')
+                                AND rh.fecha_inicio < {fechaFin}
+                                AND rh.fecha_fin > {fechaInicio}
+                        )
+                    ORDER BY h.id_habitacion")
+                .AsTracking()
+                .ToListAsync(ct);
         }
 
         private async Task EnsureHabitacionesDisponiblesAsync(ReservaDTO reserva, int? excludeIdReserva, CancellationToken ct)

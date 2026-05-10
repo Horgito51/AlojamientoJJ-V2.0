@@ -3,6 +3,7 @@ using Servicio.Hotel.Business.DTOs.Alojamiento;
 using Servicio.Hotel.Business.DTOs.Reservas;
 using Servicio.Hotel.Business.DTOs.Seguridad;
 using Servicio.Hotel.Business.DTOs.Valoraciones;
+using System.Linq;
 
 namespace Servicio.Hotel.API.Models.Responses.Public
 {
@@ -49,7 +50,8 @@ namespace Servicio.Hotel.API.Models.Responses.Public
             AceptaNinos = dto.AceptaNinos,
             PermiteMascotas = dto.PermiteMascotas,
             SePermiteFumar = dto.SePermiteFumar,
-            EstadoSucursal = dto.EstadoSucursal
+            EstadoSucursal = dto.EstadoSucursal,
+            Imagenes = dto.Imagenes.Select(i => i.ToPublicDto()).ToList()
         };
 
         public static TipoHabitacionPublicDto ToPublicDto(this TipoHabitacionDTO dto) => new()
@@ -66,7 +68,8 @@ namespace Servicio.Hotel.API.Models.Responses.Public
             AreaM2 = dto.AreaM2,
             PermiteEventos = dto.PermiteEventos,
             PermiteReservaPublica = dto.PermiteReservaPublica,
-            EstadoTipoHabitacion = dto.EstadoTipoHabitacion
+            EstadoTipoHabitacion = dto.EstadoTipoHabitacion,
+            Imagenes = dto.Imagenes.Select(i => i.ToPublicDto()).ToList()
         };
 
         public static HabitacionPublicDto ToPublicDto(this HabitacionDTO dto, SucursalDTO sucursal, TipoHabitacionDTO tipo) => new()
@@ -81,7 +84,17 @@ namespace Servicio.Hotel.API.Models.Responses.Public
             SucursalGuid = sucursal.SucursalGuid,
             TipoHabitacionGuid = tipo.TipoHabitacionGuid,
             TipoHabitacionSlug = tipo.Slug,
-            ImagenUrl = dto.Url
+            ImagenUrl = dto.Imagenes.FirstOrDefault(i => i.EsPrincipal)?.UrlImagen ?? dto.Url,
+            Imagenes = dto.Imagenes.Select(i => i.ToPublicDto()).ToList()
+        };
+
+        public static ImagenPublicDto ToPublicDto(this ImagenDTO dto) => new()
+        {
+            ImagenGuid = dto.ImagenGuid,
+            UrlImagen = dto.UrlImagen,
+            Descripcion = dto.Descripcion,
+            Orden = dto.Orden,
+            EsPrincipal = dto.EsPrincipal
         };
 
         public static ClientePublicDto ToPublicDto(this ClienteDTO dto) => new()

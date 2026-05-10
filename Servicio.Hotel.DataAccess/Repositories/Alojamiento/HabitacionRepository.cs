@@ -15,13 +15,13 @@ namespace Servicio.Hotel.DataAccess.Repositories.Alojamiento
         public HabitacionRepository(ServicioHotelDbContext context) : base(context) { }
 
         public async Task<HabitacionEntity?> GetByIdAsync(int id, CancellationToken ct = default)
-            => await base.GetByIdAsync(id, ct);
+            => await _dbSet.Include(h => h.TipoHabitacion).ThenInclude(t => t.TipoHabitacionImagenes).FirstOrDefaultAsync(h => h.IdHabitacion == id, ct);
 
         public async Task<HabitacionEntity?> GetByGuidAsync(Guid guid, CancellationToken ct = default)
-            => await _dbSet.FirstOrDefaultAsync(h => h.HabitacionGuid == guid, ct);
+            => await _dbSet.Include(h => h.TipoHabitacion).ThenInclude(t => t.TipoHabitacionImagenes).FirstOrDefaultAsync(h => h.HabitacionGuid == guid, ct);
 
         public async Task<IEnumerable<HabitacionEntity>> GetAllAsync(CancellationToken ct = default)
-            => await base.GetAllAsync(ct);
+            => await _dbSet.Include(h => h.TipoHabitacion).ThenInclude(t => t.TipoHabitacionImagenes).ToListAsync(ct);
 
         public async Task<HabitacionEntity> AddAsync(HabitacionEntity entity, CancellationToken ct = default)
             => await base.AddAsync(entity, ct);
@@ -48,15 +48,18 @@ namespace Servicio.Hotel.DataAccess.Repositories.Alojamiento
             => await _dbSet.AnyAsync(h => h.IdSucursal == idSucursal && h.NumeroHabitacion == numero, ct);
 
         public async Task<IEnumerable<HabitacionEntity>> GetBySucursalAsync(int idSucursal, CancellationToken ct = default)
-            => await _dbSet.Where(h => h.IdSucursal == idSucursal).ToListAsync(ct);
+            => await _dbSet.Include(h => h.TipoHabitacion).ThenInclude(t => t.TipoHabitacionImagenes).Where(h => h.IdSucursal == idSucursal).ToListAsync(ct);
 
         public async Task<IEnumerable<HabitacionEntity>> GetByTipoHabitacionAsync(int idTipoHabitacion, CancellationToken ct = default)
-            => await _dbSet.Where(h => h.IdTipoHabitacion == idTipoHabitacion).ToListAsync(ct);
+            => await _dbSet.Include(h => h.TipoHabitacion).ThenInclude(t => t.TipoHabitacionImagenes).Where(h => h.IdTipoHabitacion == idTipoHabitacion).ToListAsync(ct);
 
         public async Task<IEnumerable<HabitacionEntity>> GetDisponiblesAsync(int idSucursal, DateTime inicio, DateTime fin, CancellationToken ct = default)
         {
             // Habitaciones de la sucursal que estén en estado DIS (Disponible) y no eliminadas
-            var habitacionesSucursal = _dbSet.Where(h => h.IdSucursal == idSucursal && h.EstadoHabitacion == "DIS" && !h.EsEliminado);
+            var habitacionesSucursal = _dbSet
+                .Include(h => h.TipoHabitacion)
+                .ThenInclude(t => t.TipoHabitacionImagenes)
+                .Where(h => h.IdSucursal == idSucursal && h.EstadoHabitacion == "DIS" && !h.EsEliminado);
 
             // Habitaciones que tienen al menos una reserva que se solapa y NO está cancelada/anulada
             var habitacionesOcupadasIds = await _context.ReservasHabitaciones

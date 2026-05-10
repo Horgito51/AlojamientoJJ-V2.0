@@ -1,4 +1,5 @@
-﻿using System;
+using System;
+using System.Collections.Generic;
 
 namespace Servicio.Hotel.Business.DTOs.Alojamiento
 {
@@ -24,7 +25,7 @@ namespace Servicio.Hotel.Business.DTOs.Alojamiento
         public DateTime? FechaModificacionUtc { get; set; }
         public string ModificacionIp { get; set; }
         public string ServicioOrigen { get; set; }
-        // RowVersion normalmente no se expone en DTOs, pero puede incluirse si se necesita para concurrencia
         public byte[] RowVersion { get; set; }
+        public List<ImagenDTO> Imagenes { get; set; } = new();
     }
 }

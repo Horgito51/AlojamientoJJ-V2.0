@@ -47,5 +47,6 @@ namespace Servicio.Hotel.DataAccess.Entities.Alojamiento
         public ICollection<HabitacionEntity> Habitaciones { get; set; }
         public ICollection<TarifaEntity> Tarifas { get; set; }
         public ICollection<CatalogoServicioEntity> CatalogosServicios { get; set; }
+        public ICollection<SucursalImagenEntity> Imagenes { get; set; }
     }
 }

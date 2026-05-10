@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Servicio.Hotel.API.Models.Requests.Internal;
 using Servicio.Hotel.API.Models.Common;
 using Servicio.Hotel.API.Models.Responses.Internal;
+using Servicio.Hotel.API.Models.Responses.Public;
 using Servicio.Hotel.Business.DTOs.Alojamiento;
 using Servicio.Hotel.Business.Interfaces.Alojamiento;
 using System;
@@ -69,6 +70,7 @@ namespace Servicio.Hotel.API.Controllers.V1.Internal.Alojamiento
                 DescripcionHabitacion = habitacion.DescripcionHabitacion,
                 EstadoHabitacion = habitacion.EstadoHabitacion,
                 SucursalGuid = sucursal.SucursalGuid,
+                Imagenes = habitacion.Imagenes.Select(i => i.ToPublicDto()).ToList(),
                 TipoHabitacion = new TipoHabitacionRef
                 {
                     TipoHabitacionGuid = tipo.TipoHabitacionGuid,

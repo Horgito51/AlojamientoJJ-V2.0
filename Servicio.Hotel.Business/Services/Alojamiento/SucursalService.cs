@@ -10,6 +10,7 @@ using Servicio.Hotel.Business.Interfaces.Alojamiento;
 using Servicio.Hotel.Business.Mappers.Alojamiento;
 using Servicio.Hotel.Business.Validators.Alojamiento;
 using Servicio.Hotel.DataAccess.Context;
+using Servicio.Hotel.DataAccess.Entities.Alojamiento;
 using Servicio.Hotel.DataManagement.Alojamiento.Interfaces;
 using Servicio.Hotel.DataManagement.Alojamiento.Models;
 
@@ -49,7 +50,8 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
             SucursalValidator.ValidateCreate(dto);
             await EnsureNombreUnicoAsync(dto.NombreSucursal, null, ct);
             var created = await _dataService.AddAsync(dto.ToDataModel()!, ct);
-            return created.ToDto()!;
+            await ReplaceImagenesAsync(created.IdSucursal, dto.Imagenes, ct);
+            return (await _dataService.GetByIdAsync(created.IdSucursal, ct)).ToDto()!;
         }
 
         public async Task UpdateAsync(SucursalUpdateDTO dto, CancellationToken ct = default)
@@ -58,6 +60,7 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
             SucursalValidator.ValidateUpdate(dto);
             await EnsureNombreUnicoAsync(dto.NombreSucursal, dto.IdSucursal, ct);
             await _dataService.UpdateAsync(dto.ToDataModel()!, ct);
+            await ReplaceImagenesAsync(dto.IdSucursal, dto.Imagenes, ct);
         }
 
         public async Task UpdatePoliticasAsync(Guid sucursalGuid, SucursalPoliticasUpdateDTO dto, string usuario, CancellationToken ct = default)
@@ -126,6 +129,44 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
 
             if (tieneHabitacionesActivas)
                 throw new ConflictException("No se puede eliminar la sucursal porque tiene habitaciones activas asociadas.");
+        }
+
+        private async Task ReplaceImagenesAsync(int idSucursal, List<ImagenDTO>? imagenes, CancellationToken ct)
+        {
+            if (imagenes == null)
+                return;
+
+            var existing = await _context.SucursalImagenes
+                .Where(i => i.IdSucursal == idSucursal)
+                .ToListAsync(ct);
+
+            foreach (var image in existing)
+            {
+                image.Estado = "INA";
+                image.FechaModificacionUtc = DateTime.UtcNow;
+            }
+
+            var clean = imagenes
+                .Where(i => !string.IsNullOrWhiteSpace(i.UrlImagen))
+                .OrderBy(i => i.Orden <= 0 ? int.MaxValue : i.Orden)
+                .ToList();
+
+            for (var index = 0; index < clean.Count; index++)
+            {
+                var image = clean[index];
+                _context.SucursalImagenes.Add(new SucursalImagenEntity
+                {
+                    GuidSucursalImagen = image.ImagenGuid == Guid.Empty ? Guid.NewGuid() : image.ImagenGuid,
+                    IdSucursal = idSucursal,
+                    UrlImagen = image.UrlImagen.Trim(),
+                    Descripcion = image.Descripcion,
+                    Orden = image.Orden > 0 ? image.Orden : index + 1,
+                    Estado = "ACT",
+                    FechaCreacionUtc = DateTime.UtcNow
+                });
+            }
+
+            await _context.SaveChangesAsync(ct);
         }
     }
 }

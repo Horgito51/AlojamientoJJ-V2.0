@@ -2,12 +2,14 @@ using Microsoft.EntityFrameworkCore;
 using Servicio.Hotel.API.Models.Settings;
 using Servicio.Hotel.API.Services;
 using Servicio.Hotel.Business.Interfaces.Alojamiento;
+using Servicio.Hotel.Business.Interfaces.Booking;
 using Servicio.Hotel.Business.Interfaces.Facturacion;
 using Servicio.Hotel.Business.Interfaces.Hospedaje;
 using Servicio.Hotel.Business.Interfaces.Reservas;
 using Servicio.Hotel.Business.Interfaces.Seguridad;
 using Servicio.Hotel.Business.Interfaces.Valoraciones;
 using Servicio.Hotel.Business.Services.Alojamiento;
+using Servicio.Hotel.Business.Services.Booking;
 using Servicio.Hotel.Business.Services.Facturacion;
 using Servicio.Hotel.Business.Services.Hospedaje;
 using Servicio.Hotel.Business.Services.Reservas;
@@ -102,6 +104,7 @@ namespace Servicio.Hotel.API.Extensions
             services.AddScoped<IValoracionService, ValoracionService>();
             services.AddScoped<IUsuarioService, UsuarioService>();
             services.AddScoped<IRolService, RolService>();
+            services.AddScoped<IBookingAccommodationService, BookingAccommodationService>();
 
             return services;
         }

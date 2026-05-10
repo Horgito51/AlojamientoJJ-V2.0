@@ -29,8 +29,6 @@ namespace Servicio.Hotel.DataManagement.Alojamiento.Models
         public string ModificacionIp { get; set; }
         public string ServicioOrigen { get; set; }
         public byte[] RowVersion { get; set; }
-
-        // Relaciones opcionales (solo IDs, no objetos completos)
-        // public List<int> AmenidadesIds { get; set; }
+        public List<ImagenDataModel> Imagenes { get; set; } = new();
     }
 }

@@ -28,6 +28,7 @@ namespace Servicio.Hotel.DataAccess.Context
         public DbSet<CatalogoServicioEntity> CatalogosServicios { get; set; }
         public DbSet<TipoHabitacionCatalogoEntity> TiposHabitacionCatalogos { get; set; }
         public DbSet<TipoHabitacionImagenEntity> TiposHabitacionImagenes { get; set; }
+        public DbSet<SucursalImagenEntity> SucursalImagenes { get; set; }
         public DbSet<HabitacionEntity> Habitaciones { get; set; }
         public DbSet<TarifaEntity> Tarifas { get; set; }
 

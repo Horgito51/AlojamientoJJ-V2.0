@@ -44,6 +44,7 @@ namespace Servicio.Hotel.API.Models.Responses.Public
         public bool PermiteMascotas { get; set; }
         public bool SePermiteFumar { get; set; }
         public string EstadoSucursal { get; set; } = string.Empty;
+        public List<ImagenPublicDto> Imagenes { get; set; } = new();
     }
 
     public sealed class TipoHabitacionPublicDto
@@ -61,6 +62,7 @@ namespace Servicio.Hotel.API.Models.Responses.Public
         public bool PermiteEventos { get; set; }
         public bool PermiteReservaPublica { get; set; }
         public string EstadoTipoHabitacion { get; set; } = string.Empty;
+        public List<ImagenPublicDto> Imagenes { get; set; } = new();
     }
 
     public sealed class HabitacionPublicDto
@@ -76,6 +78,16 @@ namespace Servicio.Hotel.API.Models.Responses.Public
         public Guid TipoHabitacionGuid { get; set; }
         public string TipoHabitacionSlug { get; set; } = string.Empty;
         public string? ImagenUrl { get; set; }
+        public List<ImagenPublicDto> Imagenes { get; set; } = new();
+    }
+
+    public sealed class ImagenPublicDto
+    {
+        public Guid ImagenGuid { get; set; }
+        public string UrlImagen { get; set; } = string.Empty;
+        public string? Descripcion { get; set; }
+        public int Orden { get; set; }
+        public bool EsPrincipal { get; set; }
     }
 
     public sealed class ClientePublicDto

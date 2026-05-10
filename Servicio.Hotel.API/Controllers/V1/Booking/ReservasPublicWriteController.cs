@@ -88,54 +88,80 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
             if (request.Habitaciones == null || request.Habitaciones.Count == 0)
                 throw new ValidationException("RES-PUB-002", "La reserva debe tener al menos una habitacion.");
 
-            if (request.ClienteGuid == Guid.Empty)
-                throw new ValidationException("RES-PUB-003", "clienteGuid es obligatorio.");
+            if (request.ClienteGuid == Guid.Empty && request.Cliente == null)
+                throw new ValidationException("RES-PUB-003", "clienteGuid o cliente es obligatorio.");
 
             if (request.SucursalGuid == Guid.Empty)
                 throw new ValidationException("RES-PUB-004", "sucursalGuid es obligatorio.");
 
-            var cliente = await _clienteService.GetByGuidAsync(request.ClienteGuid);
+            var cliente = request.ClienteGuid != Guid.Empty
+                ? await _clienteService.GetByGuidAsync(request.ClienteGuid)
+                : await GetOrCreateClienteAsync(request.Cliente!);
             var sucursal = await _sucursalService.GetByGuidAsync(request.SucursalGuid);
-            var habitaciones = new List<ReservaHabitacionDTO>();
 
+            var habitaciones = new List<ReservaTipoHabitacionCreateDTO>();
             foreach (var habitacionRequest in request.Habitaciones)
             {
-                if (habitacionRequest.HabitacionGuid == Guid.Empty)
-                    throw new ValidationException("RES-PUB-005", "habitacionGuid es obligatorio para cada habitacion.");
+                if (habitacionRequest.TipoHabitacionGuid == Guid.Empty)
+                    throw new ValidationException("RES-PUB-005", "tipoHabitacionGuid es obligatorio para cada habitacion.");
 
-                var habitacion = await _habitacionService.GetByGuidAsync(habitacionRequest.HabitacionGuid);
-                if (habitacion.IdSucursal != sucursal.IdSucursal)
-                    throw new ValidationException("RES-PUB-006", $"La habitacion {habitacionRequest.HabitacionGuid} no pertenece a la sucursal indicada.");
-
-                habitaciones.Add(new ReservaHabitacionDTO
+                habitaciones.Add(new ReservaTipoHabitacionCreateDTO
                 {
-                    IdHabitacion = habitacion.IdHabitacion,
-                    FechaInicio = habitacionRequest.FechaInicio ?? request.FechaInicio,
-                    FechaFin = habitacionRequest.FechaFin ?? request.FechaFin,
+                    TipoHabitacionGuid = habitacionRequest.TipoHabitacionGuid,
+                    NumHabitaciones = habitacionRequest.NumHabitaciones,
                     NumAdultos = habitacionRequest.NumAdultos,
-                    NumNinos = habitacionRequest.NumNinos,
-                    DescuentoLinea = habitacionRequest.DescuentoLinea,
-                    EstadoDetalle = "PEN"
+                    NumNinos = habitacionRequest.NumNinos
                 });
             }
 
-            var createDto = new ReservaCreateDTO
+            var createDto = new ReservaPorTipoHabitacionCreateDTO
             {
                 IdCliente = cliente.IdCliente,
                 IdSucursal = sucursal.IdSucursal,
                 FechaInicio = request.FechaInicio,
                 FechaFin = request.FechaFin,
                 DescuentoAplicado = request.DescuentoAplicado,
-                OrigenCanalReserva = "API_PUBLICA",
-                EstadoReserva = "PEN",
+                OrigenCanalReserva = string.IsNullOrWhiteSpace(request.OrigenCanalReserva) ? "API_PUBLICA" : request.OrigenCanalReserva,
                 Observaciones = request.Observaciones ?? string.Empty,
                 EsWalkin = request.EsWalkin,
                 Habitaciones = habitaciones
             };
 
-            var result = await _reservaService.CreateAsync(createDto);
+            var result = await _reservaService.CreateByTipoHabitacionAsync(createDto, HttpContext.RequestAborted);
             var response = await ToPublicReservaDtoAsync(result);
             return CreatedAtAction(nameof(GetByGuid), new { reservaGuid = response.ReservaGuid }, response);
+        }
+
+        private async Task<ClienteDTO> GetOrCreateClienteAsync(PublicClienteCreateRequest clienteRequest)
+        {
+            if (string.IsNullOrWhiteSpace(clienteRequest.TipoIdentificacion) ||
+                string.IsNullOrWhiteSpace(clienteRequest.NumeroIdentificacion) ||
+                string.IsNullOrWhiteSpace(clienteRequest.Nombres) ||
+                string.IsNullOrWhiteSpace(clienteRequest.Correo) ||
+                string.IsNullOrWhiteSpace(clienteRequest.Telefono))
+            {
+                throw new ValidationException("RES-PUB-CLI-001", "tipoIdentificacion, numeroIdentificacion, nombres, correo y telefono son obligatorios.");
+            }
+
+            try
+            {
+                return await _clienteService.GetByIdentificacionAsync(clienteRequest.TipoIdentificacion, clienteRequest.NumeroIdentificacion, HttpContext.RequestAborted);
+            }
+            catch (NotFoundException)
+            {
+                return await _clienteService.CreateAsync(new ClienteCreateDTO
+                {
+                    TipoIdentificacion = clienteRequest.TipoIdentificacion,
+                    NumeroIdentificacion = clienteRequest.NumeroIdentificacion,
+                    Nombres = clienteRequest.Nombres,
+                    Apellidos = clienteRequest.Apellidos ?? string.Empty,
+                    RazonSocial = string.Empty,
+                    Correo = clienteRequest.Correo,
+                    Telefono = clienteRequest.Telefono,
+                    Direccion = clienteRequest.Direccion ?? string.Empty,
+                    Estado = "ACT"
+                }, HttpContext.RequestAborted);
+            }
         }
 
         [HttpPatch("{reservaGuid:guid}/cancelar")]

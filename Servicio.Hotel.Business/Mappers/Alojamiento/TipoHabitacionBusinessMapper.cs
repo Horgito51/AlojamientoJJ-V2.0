@@ -36,7 +36,8 @@ namespace Servicio.Hotel.Business.Mappers.Alojamiento
                 FechaModificacionUtc = model.FechaModificacionUtc,
                 ModificacionIp = model.ModificacionIp,
                 ServicioOrigen = model.ServicioOrigen,
-                RowVersion = model.RowVersion
+                RowVersion = model.RowVersion,
+                Imagenes = model.Imagenes.ToDtoList()
             };
         }
 
@@ -69,7 +70,8 @@ namespace Servicio.Hotel.Business.Mappers.Alojamiento
                 FechaModificacionUtc = dto.FechaModificacionUtc,
                 ModificacionIp = dto.ModificacionIp,
                 ServicioOrigen = dto.ServicioOrigen,
-                RowVersion = dto.RowVersion
+                RowVersion = dto.RowVersion,
+                Imagenes = dto.Imagenes.ToDataModelList()
             };
         }
 
@@ -95,7 +97,8 @@ namespace Servicio.Hotel.Business.Mappers.Alojamiento
                 AreaM2 = dto.AreaM2,
                 PermiteEventos = dto.PermiteEventos,
                 PermiteReservaPublica = dto.PermiteReservaPublica,
-                EstadoTipoHabitacion = dto.EstadoTipoHabitacion
+                EstadoTipoHabitacion = dto.EstadoTipoHabitacion,
+                Imagenes = dto.Imagenes.ToDataModelList()
             };
         }
 
@@ -116,7 +119,8 @@ namespace Servicio.Hotel.Business.Mappers.Alojamiento
                 AreaM2 = dto.AreaM2,
                 PermiteEventos = dto.PermiteEventos,
                 PermiteReservaPublica = dto.PermiteReservaPublica,
-                EstadoTipoHabitacion = dto.EstadoTipoHabitacion
+                EstadoTipoHabitacion = dto.EstadoTipoHabitacion,
+                Imagenes = dto.Imagenes.ToDataModelList()
             };
         }
     }

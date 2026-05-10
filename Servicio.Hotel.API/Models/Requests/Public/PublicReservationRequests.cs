@@ -15,6 +15,8 @@ namespace Servicio.Hotel.API.Models.Requests.Public
         public decimal DescuentoAplicado { get; set; }
         public string? Observaciones { get; set; }
         public bool EsWalkin { get; set; }
+        public string? OrigenCanalReserva { get; set; }
+        public PublicClienteCreateRequest? Cliente { get; set; }
         public List<PublicReservaHabitacionCreateRequest> Habitaciones { get; set; } = new();
 
         [JsonExtensionData]
@@ -33,6 +35,8 @@ namespace Servicio.Hotel.API.Models.Requests.Public
     public sealed class PublicReservaHabitacionCreateRequest
     {
         public Guid HabitacionGuid { get; set; }
+        public Guid TipoHabitacionGuid { get; set; }
+        public int NumHabitaciones { get; set; } = 1;
         public DateTime? FechaInicio { get; set; }
         public DateTime? FechaFin { get; set; }
         public int NumAdultos { get; set; } = 1;
@@ -44,6 +48,17 @@ namespace Servicio.Hotel.API.Models.Requests.Public
 
         public void ValidateNoIds()
             => PublicRequestGuard.RejectIdProperties(ExtraProperties);
+    }
+
+    public sealed class PublicClienteCreateRequest
+    {
+        public string TipoIdentificacion { get; set; } = string.Empty;
+        public string NumeroIdentificacion { get; set; } = string.Empty;
+        public string Nombres { get; set; } = string.Empty;
+        public string? Apellidos { get; set; }
+        public string Correo { get; set; } = string.Empty;
+        public string Telefono { get; set; } = string.Empty;
+        public string? Direccion { get; set; }
     }
 
     public sealed class PublicReservaPrecioRequest

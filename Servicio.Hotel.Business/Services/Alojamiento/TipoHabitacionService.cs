@@ -2,11 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
 using Servicio.Hotel.Business.Common;
 using Servicio.Hotel.Business.DTOs.Alojamiento;
 using Servicio.Hotel.Business.Exceptions;
 using Servicio.Hotel.Business.Interfaces.Alojamiento;
 using Servicio.Hotel.Business.Mappers.Alojamiento;
+using Servicio.Hotel.DataAccess.Context;
+using Servicio.Hotel.DataAccess.Entities.Alojamiento;
 using Servicio.Hotel.DataManagement.Alojamiento.Interfaces;
 
 namespace Servicio.Hotel.Business.Services.Alojamiento
@@ -14,10 +17,12 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
     public class TipoHabitacionService : ITipoHabitacionService
     {
         private readonly ITipoHabitacionDataService _tipoHabitacionDataService;
+        private readonly ServicioHotelDbContext _context;
 
-        public TipoHabitacionService(ITipoHabitacionDataService tipoHabitacionDataService)
+        public TipoHabitacionService(ITipoHabitacionDataService tipoHabitacionDataService, ServicioHotelDbContext context)
         {
             _tipoHabitacionDataService = tipoHabitacionDataService;
+            _context = context;
         }
 
         public async Task<TipoHabitacionDTO> GetByIdAsync(int id, CancellationToken ct = default)
@@ -69,7 +74,8 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
             var dataModel = tipoCreateDto.ToDataModel();
             dataModel.Slug = slug;
             var created = await _tipoHabitacionDataService.AddAsync(dataModel, ct);
-            return created.ToDto();
+            await ReplaceImagenesAsync(created.IdTipoHabitacion, tipoCreateDto.Imagenes, ct);
+            return (await _tipoHabitacionDataService.GetByIdAsync(created.IdTipoHabitacion, ct)).ToDto();
         }
 
         public async Task UpdateAsync(TipoHabitacionUpdateDTO tipoUpdateDto, CancellationToken ct = default)
@@ -79,6 +85,7 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
                 throw new NotFoundException("TIP-004", $"No se encontró el tipo de habitación con ID {tipoUpdateDto.IdTipoHabitacion}.");
             var dataModel = tipoUpdateDto.ToDataModel();
             await _tipoHabitacionDataService.UpdateAsync(dataModel, ct);
+            await ReplaceImagenesAsync(tipoUpdateDto.IdTipoHabitacion, tipoUpdateDto.Imagenes, ct);
         }
 
         public async Task DeleteAsync(int id, CancellationToken ct = default)
@@ -98,6 +105,39 @@ namespace Servicio.Hotel.Business.Services.Alojamiento
         public async Task<bool> ExistsByCodigoAsync(string codigo, CancellationToken ct = default)
         {
             return await _tipoHabitacionDataService.ExistsByCodigoAsync(codigo, ct);
+        }
+
+        private async Task ReplaceImagenesAsync(int idTipoHabitacion, List<ImagenDTO>? imagenes, CancellationToken ct)
+        {
+            if (imagenes == null)
+                return;
+
+            var existing = await _context.TiposHabitacionImagenes
+                .Where(i => i.IdTipoHabitacion == idTipoHabitacion)
+                .ToListAsync(ct);
+            _context.TiposHabitacionImagenes.RemoveRange(existing);
+
+            var clean = imagenes
+                .Where(i => !string.IsNullOrWhiteSpace(i.UrlImagen))
+                .OrderBy(i => i.Orden <= 0 ? int.MaxValue : i.Orden)
+                .ToList();
+
+            for (var index = 0; index < clean.Count; index++)
+            {
+                var image = clean[index];
+                _context.TiposHabitacionImagenes.Add(new TipoHabitacionImagenEntity
+                {
+                    IdTipoHabitacion = idTipoHabitacion,
+                    UrlImagen = image.UrlImagen.Trim(),
+                    DescripcionImagen = image.Descripcion,
+                    OrdenVisualizacion = image.Orden > 0 ? image.Orden : index + 1,
+                    EsPrincipal = image.EsPrincipal || (!clean.Any(i => i.EsPrincipal) && index == 0),
+                    FechaRegistroUtc = DateTime.UtcNow,
+                    CreadoPorUsuario = "Sistema"
+                });
+            }
+
+            await _context.SaveChangesAsync(ct);
         }
     }
 }

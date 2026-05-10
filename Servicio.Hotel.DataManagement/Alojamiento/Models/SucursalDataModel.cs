@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace Servicio.Hotel.DataManagement.Alojamiento.Models
 {
@@ -42,5 +43,6 @@ namespace Servicio.Hotel.DataManagement.Alojamiento.Models
         public string ModificacionIp { get; set; } = string.Empty;
         public string ServicioOrigen { get; set; } = string.Empty;
         public byte[]? RowVersion { get; set; }
+        public List<ImagenDataModel> Imagenes { get; set; } = new();
     }
 }

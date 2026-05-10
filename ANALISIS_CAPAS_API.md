@@ -58,7 +58,6 @@ Se reviso el flujo `API -> Business -> DataManagement -> DataAccess` con foco en
 
 - `GET /api/v1/accommodations/search`
 - `GET /api/v1/accommodations/{id}`
-- `GET /api/v1/accommodations/categories`
 - `GET /api/v1/accommodations/{id}/reviews`
 
 ### API interna
