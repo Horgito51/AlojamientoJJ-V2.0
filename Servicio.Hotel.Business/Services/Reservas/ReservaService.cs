@@ -142,6 +142,7 @@ namespace Servicio.Hotel.Business.Services.Reservas
         public async Task<ReservaDTO> CreateByTipoHabitacionAsync(ReservaPorTipoHabitacionCreateDTO reservaCreateDto, CancellationToken ct = default)
         {
             ValidateReservaPorTipoHabitacion(reservaCreateDto);
+            await EnsureSucursalActivaAsync(reservaCreateDto.IdSucursal, ct);
 
             ReservaDTO? created = null;
             await _unitOfWork.ExecuteInTransactionAsync(async () =>
@@ -160,6 +161,8 @@ namespace Servicio.Hotel.Business.Services.Reservas
 
                     if (request.NumAdultos > tipo.CapacidadAdultos || request.NumNinos > tipo.CapacidadNinos)
                         throw new ValidationException("RES-TIPO-007", $"La capacidad solicitada excede el tipo de habitacion {tipo.NombreTipoHabitacion}.");
+                    if ((request.NumAdultos + request.NumNinos) > tipo.CapacidadTotal)
+                        throw new ValidationException("RES-TIPO-012", $"La ocupacion total excede la capacidad permitida para {tipo.NombreTipoHabitacion}.");
 
                     var habitacionesAsignadas = await GetHabitacionesDisponiblesForUpdateAsync(
                         reservaCreateDto.IdSucursal,
@@ -182,6 +185,7 @@ namespace Servicio.Hotel.Business.Services.Reservas
                         FechaFin = reservaCreateDto.FechaFin,
                         NumAdultos = request.NumAdultos,
                         NumNinos = request.NumNinos,
+                        DescuentoLinea = request.DescuentoLinea,
                         EstadoDetalle = "PEN"
                     }));
                 }
@@ -411,7 +415,21 @@ namespace Servicio.Hotel.Business.Services.Reservas
                     throw new ValidationException("RES-TIPO-010", "numAdultos debe ser mayor a cero.");
                 if (item.NumNinos < 0)
                     throw new ValidationException("RES-TIPO-011", "numNinos no puede ser negativo.");
+                if (item.DescuentoLinea < 0)
+                    throw new ValidationException("RES-TIPO-013", "descuentoLinea no puede ser negativo.");
             }
+        }
+
+        private async Task EnsureSucursalActivaAsync(int idSucursal, CancellationToken ct)
+        {
+            var sucursal = await _context.Sucursales
+                .AsNoTracking()
+                .FirstOrDefaultAsync(s => s.IdSucursal == idSucursal, ct);
+
+            if (sucursal == null)
+                throw new NotFoundException("RES-TIPO-SUC-001", $"No se encontro la sucursal con ID {idSucursal}.");
+            if (sucursal.EsEliminado || !string.Equals(sucursal.EstadoSucursal, "ACT", StringComparison.OrdinalIgnoreCase))
+                throw new ValidationException("RES-TIPO-SUC-002", "La sucursal no esta activa para crear reservas.");
         }
 
         private async Task<List<HabitacionEntity>> GetHabitacionesDisponiblesForUpdateAsync(

@@ -49,10 +49,10 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
         [HttpGet("{sucursalGuid:guid}")]
         public async Task<ActionResult<AccommodationDetailResponseDTO>> GetByGuid(
             Guid sucursalGuid,
-            [FromQuery] DateTime? fechaEntrada = null,
-            [FromQuery] DateTime? fechaSalida = null)
+            [FromQuery] DateTime? fechaInicio = null,
+            [FromQuery] DateTime? fechaFin = null)
         {
-            return Ok(await _bookingService.GetDetailAsync(sucursalGuid, fechaEntrada, fechaSalida, HttpContext.RequestAborted));
+            return Ok(await _bookingService.GetDetailAsync(sucursalGuid, fechaInicio, fechaFin, HttpContext.RequestAborted));
         }
 
         [HttpGet("{sucursalGuid:guid}/reviews")]
@@ -62,16 +62,6 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
             [FromQuery] int limite = 10)
         {
             return Ok(await _bookingService.GetReviewsAsync(sucursalGuid, pagina, limite, HttpContext.RequestAborted));
-        }
-
-        [HttpGet("sucursales/{sucursalGuid:guid}/habitaciones")]
-        public async Task<ActionResult<IEnumerable<HabitacionPublicListItemDTO>>> GetHabitacionesDisponibles(
-            Guid sucursalGuid,
-            [FromQuery] DateTime fechaEntrada,
-            [FromQuery] DateTime fechaSalida)
-        {
-            RejectIdQueryParameters();
-            return Ok(await _bookingService.GetHabitacionesDisponiblesAsync(sucursalGuid, fechaEntrada, fechaSalida, HttpContext.RequestAborted));
         }
 
         [HttpPost("reservas")]
@@ -137,7 +127,7 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                 throw new ValidationException("RES-BOOK-003", "fechaInicio es obligatoria.");
             if (request.FechaFin == default || request.FechaFin <= request.FechaInicio)
                 throw new ValidationException("RES-BOOK-004", "fechaFin debe ser posterior a fechaInicio.");
-            if ((!request.ClienteGuid.HasValue || request.ClienteGuid.Value == Guid.Empty) && request.Cliente == null)
+            if (request.Cliente == null)
                 throw new ValidationException("RES-BOOK-005", "cliente es obligatorio.");
             if (request.Habitaciones == null || request.Habitaciones.Count == 0)
                 throw new ValidationException("RES-BOOK-006", "La reserva debe incluir al menos un tipo de habitacion.");
@@ -153,9 +143,6 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
 
         private async Task<ClienteDTO> GetOrCreateClienteAsync(CrearReservaPublicRequestDTO request)
         {
-            if (request.ClienteGuid.HasValue && request.ClienteGuid.Value != Guid.Empty)
-                return await _clienteService.GetByGuidAsync(request.ClienteGuid.Value, HttpContext.RequestAborted);
-
             var clienteRequest = request.Cliente;
             if (clienteRequest == null ||
                 string.IsNullOrWhiteSpace(clienteRequest.TipoIdentificacion) ||
@@ -169,16 +156,18 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
 
             try
             {
-                return await _clienteService.GetByIdentificacionAsync(
-                    clienteRequest.TipoIdentificacion,
-                    clienteRequest.NumeroIdentificacion,
+                return await _clienteService.GetByCorreoAsync(
+                    clienteRequest.Correo,
                     HttpContext.RequestAborted);
             }
             catch (NotFoundException)
             {
                 try
                 {
-                    return await _clienteService.GetByCorreoAsync(clienteRequest.Correo, HttpContext.RequestAborted);
+                    return await _clienteService.GetByIdentificacionAsync(
+                        clienteRequest.TipoIdentificacion,
+                        clienteRequest.NumeroIdentificacion,
+                        HttpContext.RequestAborted);
                 }
                 catch (NotFoundException)
                 {
@@ -218,7 +207,6 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                     PrecioNocheAplicado = detalle.PrecioNocheAplicado,
                     SubtotalLinea = detalle.SubtotalLinea,
                     ValorIvaLinea = detalle.ValorIvaLinea,
-                    DescuentoLinea = detalle.DescuentoLinea,
                     TotalLinea = detalle.TotalLinea,
                     EstadoDetalle = detalle.EstadoDetalle
                 });
@@ -236,13 +224,11 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                 SubtotalReserva = reserva.SubtotalReserva,
                 ValorIva = reserva.ValorIva,
                 TotalReserva = reserva.TotalReserva,
-                DescuentoAplicado = reserva.DescuentoAplicado,
                 SaldoPendiente = reserva.SaldoPendiente,
                 OrigenCanalReserva = reserva.OrigenCanalReserva,
                 EstadoReserva = reserva.EstadoReserva,
                 FechaConfirmacionUtc = reserva.FechaConfirmacionUtc,
                 Observaciones = reserva.Observaciones,
-                EsWalkin = reserva.EsWalkin,
                 Habitaciones = habitaciones
             };
         }

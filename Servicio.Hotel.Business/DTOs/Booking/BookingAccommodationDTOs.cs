@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Servicio.Hotel.Business.DTOs.Booking
 {
@@ -64,6 +65,8 @@ namespace Servicio.Hotel.Business.DTOs.Booking
         public List<string> Amenities { get; set; } = new();
         public List<string> Imagenes { get; set; } = new();
         public AccommodationPolicyDTO Politicas { get; set; } = new();
+
+        [JsonIgnore]
         public AccommodationAvailabilityDTO Disponibilidad { get; set; } = new();
     }
 

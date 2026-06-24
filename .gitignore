@@ -3,3 +3,10 @@ bin/
 obj/
 *.user
 *.suo
+*.rsuser
+*.cache
+*.log
+*.lscache
+TestResults/
+artifacts/
+publish/

@@ -10,11 +10,14 @@ using Servicio.Hotel.Business.Interfaces.Alojamiento;
 using Servicio.Hotel.Business.Interfaces.Booking;
 using Servicio.Hotel.DataAccess.Context;
 using Servicio.Hotel.DataAccess.Entities.Alojamiento;
+using Servicio.Hotel.DataAccess.Entities.Valoraciones;
 
 namespace Servicio.Hotel.Business.Services.Booking
 {
     public sealed class BookingAccommodationService : IBookingAccommodationService
     {
+        private static readonly string[] PublicReviewStates = { "PUB" };
+
         private static readonly string[] ActiveReservationStates = { "PEN", "CON" };
         private readonly ServicioHotelDbContext _context;
         private readonly ISucursalService _sucursalService;
@@ -144,11 +147,8 @@ namespace Servicio.Hotel.Business.Services.Booking
             pagina = Math.Max(1, pagina);
             limite = Math.Clamp(limite, 1, 50);
 
-            var query = from valoracion in _context.Valoraciones.AsNoTracking()
+            var query = from valoracion in BuildPublicReviewsQuery(sucursal.IdSucursal)
                         join cliente in _context.Clientes.AsNoTracking() on valoracion.IdCliente equals cliente.IdCliente
-                        where valoracion.IdSucursal == sucursal.IdSucursal
-                            && valoracion.EstadoValoracion == "APR"
-                            && valoracion.PublicadaEnPortal
                         orderby valoracion.FechaRegistroUtc descending
                         select new AccommodationReviewDTO
                         {
@@ -291,9 +291,7 @@ namespace Servicio.Hotel.Business.Services.Booking
             var tipoIds = habitaciones.Select(h => h.IdTipoHabitacion).Distinct().ToList();
             var imagenPrincipal = await GetImagenPrincipalAsync(tipoIds, ct);
             var servicios = await GetAmenitiesAsync(sucursal.IdSucursal, tipoIds, ct);
-            var rating = await _context.Valoraciones
-                .AsNoTracking()
-                .Where(v => v.IdSucursal == sucursal.IdSucursal && v.EstadoValoracion == "APR" && v.PublicadaEnPortal)
+            var rating = await BuildPublicReviewsQuery(sucursal.IdSucursal)
                 .GroupBy(v => v.IdSucursal)
                 .Select(g => new { Promedio = g.Average(v => v.PuntuacionGeneral), Total = g.Count() })
                 .FirstOrDefaultAsync(ct);
@@ -336,6 +334,19 @@ namespace Servicio.Hotel.Business.Services.Booking
                     (_, tipo) => tipo)
                 .OrderBy(t => t.NombreTipoHabitacion)
                 .ToListAsync(ct);
+        }
+
+        private IQueryable<ValoracionEntity> BuildPublicReviewsQuery(int idSucursal)
+        {
+            return _context.Valoraciones
+                .AsNoTracking()
+                .Where(v => v.IdSucursal == idSucursal
+                    && v.PublicadaEnPortal
+                    && PublicReviewStates.Contains(v.EstadoValoracion)
+                    && (!v.IdHabitacion.HasValue ||
+                        _context.Habitaciones
+                            .AsNoTracking()
+                            .Any(h => h.IdHabitacion == v.IdHabitacion.Value && h.IdSucursal == idSucursal)));
         }
 
         private async Task<AccommodationAvailabilityDTO> BuildAvailabilityAsync(int idSucursal, List<TipoHabitacionEntity> tipos, DateTime? fechaEntrada, DateTime? fechaSalida, CancellationToken ct)

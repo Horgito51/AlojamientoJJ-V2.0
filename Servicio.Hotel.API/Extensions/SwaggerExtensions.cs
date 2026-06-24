@@ -18,6 +18,7 @@ namespace Servicio.Hotel.API.Extensions
                     Version = "v1",
                     Description = "API para gestión de hoteles, reservas y facturación"
                 });
+                c.SchemaFilter<AccommodationDetailSchemaFilter>();
 
                 // 🔐 JWT en Swagger - esquema Http estándar
                 c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
@@ -47,6 +48,17 @@ namespace Servicio.Hotel.API.Extensions
             });
 
             return services;
+        }
+    }
+
+    public sealed class AccommodationDetailSchemaFilter : Swashbuckle.AspNetCore.SwaggerGen.ISchemaFilter
+    {
+        public void Apply(OpenApiSchema schema, Swashbuckle.AspNetCore.SwaggerGen.SchemaFilterContext context)
+        {
+            if (context.Type.FullName != "Servicio.Hotel.Business.DTOs.Booking.AccommodationDetailResponseDTO")
+                return;
+
+            schema.Properties.Remove("disponibilidad");
         }
     }
 }

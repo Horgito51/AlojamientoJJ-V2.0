@@ -70,7 +70,7 @@ namespace Servicio.Hotel.Business.Services.Seguridad
 
             return new LoginResponseDTO
             {
-                AccessToken = token,
+                Token = token,
                 RefreshToken = refreshToken,
                 ExpiresIn = expirationMinutes * 60,
                 UsuarioGuid = usuario.UsuarioGuid,
@@ -196,7 +196,7 @@ namespace Servicio.Hotel.Business.Services.Seguridad
 
             return new LoginResponseDTO
             {
-                AccessToken = token,
+                Token = token,
                 RefreshToken = newRefresh,
                 ExpiresIn = expirationMinutes * 60,
                 UsuarioGuid = usuario.UsuarioGuid,
@@ -362,7 +362,7 @@ namespace Servicio.Hotel.Business.Services.Seguridad
 
             return new LoginResponseDTO
             {
-                AccessToken = token,
+                Token = token,
                 RefreshToken = refreshToken,
                 ExpiresIn = expirationMinutes * 60,
                 UsuarioGuid = usuarioCreado.UsuarioGuid,

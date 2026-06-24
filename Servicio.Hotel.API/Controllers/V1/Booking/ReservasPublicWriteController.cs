@@ -88,15 +88,13 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
             if (request.Habitaciones == null || request.Habitaciones.Count == 0)
                 throw new ValidationException("RES-PUB-002", "La reserva debe tener al menos una habitacion.");
 
-            if (request.ClienteGuid == Guid.Empty && request.Cliente == null)
-                throw new ValidationException("RES-PUB-003", "clienteGuid o cliente es obligatorio.");
+            if (request.Cliente == null)
+                throw new ValidationException("RES-PUB-003", "cliente es obligatorio.");
 
             if (request.SucursalGuid == Guid.Empty)
                 throw new ValidationException("RES-PUB-004", "sucursalGuid es obligatorio.");
 
-            var cliente = request.ClienteGuid != Guid.Empty
-                ? await _clienteService.GetByGuidAsync(request.ClienteGuid)
-                : await GetOrCreateClienteAsync(request.Cliente!);
+            var cliente = await GetOrCreateClienteAsync(request.Cliente);
             var sucursal = await _sucursalService.GetByGuidAsync(request.SucursalGuid);
 
             var habitaciones = new List<ReservaTipoHabitacionCreateDTO>();
@@ -120,10 +118,10 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                 IdSucursal = sucursal.IdSucursal,
                 FechaInicio = request.FechaInicio,
                 FechaFin = request.FechaFin,
-                DescuentoAplicado = request.DescuentoAplicado,
+                DescuentoAplicado = 0m,
                 OrigenCanalReserva = string.IsNullOrWhiteSpace(request.OrigenCanalReserva) ? "API_PUBLICA" : request.OrigenCanalReserva,
                 Observaciones = request.Observaciones ?? string.Empty,
-                EsWalkin = request.EsWalkin,
+                EsWalkin = false,
                 Habitaciones = habitaciones
             };
 
@@ -145,22 +143,29 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
 
             try
             {
-                return await _clienteService.GetByIdentificacionAsync(clienteRequest.TipoIdentificacion, clienteRequest.NumeroIdentificacion, HttpContext.RequestAborted);
+                return await _clienteService.GetByCorreoAsync(clienteRequest.Correo, HttpContext.RequestAborted);
             }
             catch (NotFoundException)
             {
-                return await _clienteService.CreateAsync(new ClienteCreateDTO
+                try
                 {
-                    TipoIdentificacion = clienteRequest.TipoIdentificacion,
-                    NumeroIdentificacion = clienteRequest.NumeroIdentificacion,
-                    Nombres = clienteRequest.Nombres,
-                    Apellidos = clienteRequest.Apellidos ?? string.Empty,
-                    RazonSocial = string.Empty,
-                    Correo = clienteRequest.Correo,
-                    Telefono = clienteRequest.Telefono,
-                    Direccion = clienteRequest.Direccion ?? string.Empty,
-                    Estado = "ACT"
-                }, HttpContext.RequestAborted);
+                    return await _clienteService.GetByIdentificacionAsync(clienteRequest.TipoIdentificacion, clienteRequest.NumeroIdentificacion, HttpContext.RequestAborted);
+                }
+                catch (NotFoundException)
+                {
+                    return await _clienteService.CreateAsync(new ClienteCreateDTO
+                    {
+                        TipoIdentificacion = clienteRequest.TipoIdentificacion,
+                        NumeroIdentificacion = clienteRequest.NumeroIdentificacion,
+                        Nombres = clienteRequest.Nombres,
+                        Apellidos = clienteRequest.Apellidos ?? string.Empty,
+                        RazonSocial = string.Empty,
+                        Correo = clienteRequest.Correo,
+                        Telefono = clienteRequest.Telefono,
+                        Direccion = clienteRequest.Direccion ?? string.Empty,
+                        Estado = "ACT"
+                    }, HttpContext.RequestAborted);
+                }
             }
         }
 
@@ -233,7 +238,6 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                     PrecioNocheAplicado = detalle.PrecioNocheAplicado,
                     SubtotalLinea = detalle.SubtotalLinea,
                     ValorIvaLinea = detalle.ValorIvaLinea,
-                    DescuentoLinea = detalle.DescuentoLinea,
                     TotalLinea = detalle.TotalLinea,
                     EstadoDetalle = detalle.EstadoDetalle
                 });
@@ -251,7 +255,6 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                 SubtotalReserva = reserva.SubtotalReserva,
                 ValorIva = reserva.ValorIva,
                 TotalReserva = reserva.TotalReserva,
-                DescuentoAplicado = reserva.DescuentoAplicado,
                 SaldoPendiente = reserva.SaldoPendiente,
                 OrigenCanalReserva = reserva.OrigenCanalReserva,
                 EstadoReserva = reserva.EstadoReserva,
@@ -259,7 +262,6 @@ namespace Servicio.Hotel.API.Controllers.V1.Booking
                 FechaCancelacionUtc = reserva.FechaCancelacionUtc,
                 MotivoCancelacion = reserva.MotivoCancelacion,
                 Observaciones = reserva.Observaciones,
-                EsWalkin = reserva.EsWalkin,
                 Habitaciones = habitaciones
             };
         }

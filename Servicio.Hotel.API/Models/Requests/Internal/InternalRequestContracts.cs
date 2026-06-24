@@ -96,26 +96,18 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
         public string Estado { get; set; } = "ACT";
     }
 
-    public class ReservaCreateRequest
+    public class InternalReservaCreateRequest
     {
-        public int IdCliente { get; set; }
-        public int IdSucursal { get; set; }
-        public Guid? ClienteGuid { get; set; }
-        public Guid? SucursalGuid { get; set; }
+        public Guid ClienteGuid { get; set; }
         public ClienteCreateRequest? Cliente { get; set; }
+        public Guid SucursalGuid { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime FechaFin { get; set; }
-        public decimal SubtotalReserva { get; set; }
-        public decimal ValorIva { get; set; }
-        public decimal TotalReserva { get; set; }
         public decimal DescuentoAplicado { get; set; }
-        public decimal SaldoPendiente { get; set; }
-        public string OrigenCanalReserva { get; set; } = string.Empty;
-        public string EstadoReserva { get; set; } = "PEN";
         public string? Observaciones { get; set; }
         public bool EsWalkin { get; set; }
-
-        public List<ReservaHabitacionCreateRequest> Habitaciones { get; set; } = new();
+        public string? OrigenCanalReserva { get; set; } = "INTERNO";
+        public List<InternalReservaHabitacionTipoRequest> Habitaciones { get; set; } = new();
     }
 
     public class ReservaHabitacionIdRequest
@@ -123,22 +115,13 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
         public int IdHabitacion { get; set; }
     }
 
-    public class ReservaHabitacionCreateRequest
+    public class InternalReservaHabitacionTipoRequest
     {
-        public int IdHabitacion { get; set; }
-        public Guid? TipoHabitacionGuid { get; set; }
+        public Guid TipoHabitacionGuid { get; set; }
         public int NumHabitaciones { get; set; } = 1;
-        public int? IdTarifa { get; set; }
-        public DateTime FechaInicio { get; set; }
-        public DateTime FechaFin { get; set; }
         public int NumAdultos { get; set; } = 1;
         public int NumNinos { get; set; } = 0;
-        public decimal PrecioNocheAplicado { get; set; }
-        public decimal SubtotalLinea { get; set; }
-        public decimal ValorIvaLinea { get; set; }
         public decimal DescuentoLinea { get; set; } = 0;
-        public decimal TotalLinea { get; set; }
-        public string EstadoDetalle { get; set; } = "PEN";
     }
 
     public class ReservaUpdateRequest
@@ -462,36 +445,25 @@ namespace Servicio.Hotel.API.Models.Requests.Internal
                 Estado = request.Estado
             };
 
-        public static Servicio.Hotel.Business.DTOs.Reservas.ReservaCreateDTO ToCreateDto(this ReservaCreateRequest request)
+        public static Servicio.Hotel.Business.DTOs.Reservas.ReservaPorTipoHabitacionCreateDTO ToCreateDto(this InternalReservaCreateRequest request, int idCliente, int idSucursal)
             => new()
             {
-                IdCliente = request.IdCliente,
-                IdSucursal = request.IdSucursal,
+                IdCliente = idCliente,
+                IdSucursal = idSucursal,
                 FechaInicio = request.FechaInicio,
                 FechaFin = request.FechaFin,
-                SubtotalReserva = request.SubtotalReserva,
-                ValorIva = request.ValorIva,
-                TotalReserva = request.TotalReserva,
                 DescuentoAplicado = request.DescuentoAplicado,
-                SaldoPendiente = request.SaldoPendiente,
-                OrigenCanalReserva = request.OrigenCanalReserva,
-                EstadoReserva = request.EstadoReserva,
+                OrigenCanalReserva = string.IsNullOrWhiteSpace(request.OrigenCanalReserva) ? "INTERNO" : request.OrigenCanalReserva,
                 Observaciones = request.Observaciones ?? string.Empty,
                 EsWalkin = request.EsWalkin,
-                Habitaciones = request.Habitaciones.Select(h => new Servicio.Hotel.Business.DTOs.Reservas.ReservaHabitacionDTO
+                ExigirPermiteReservaPublica = false,
+                Habitaciones = request.Habitaciones.Select(h => new Servicio.Hotel.Business.DTOs.Reservas.ReservaTipoHabitacionCreateDTO
                 {
-                    IdHabitacion = h.IdHabitacion,
-                    FechaInicio = h.FechaInicio,
-                    FechaFin = h.FechaFin,
+                    TipoHabitacionGuid = h.TipoHabitacionGuid,
+                    NumHabitaciones = h.NumHabitaciones,
                     NumAdultos = h.NumAdultos,
                     NumNinos = h.NumNinos,
-                    IdTarifa = h.IdTarifa,
-                    PrecioNocheAplicado = h.PrecioNocheAplicado,
-                    SubtotalLinea = h.SubtotalLinea,
-                    ValorIvaLinea = h.ValorIvaLinea,
-                    DescuentoLinea = h.DescuentoLinea,
-                    TotalLinea = h.TotalLinea,
-                    EstadoDetalle = h.EstadoDetalle
+                    DescuentoLinea = h.DescuentoLinea
                 }).ToList()
             };
 

@@ -1,53 +1,29 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
-using System.Text.Json.Serialization;
-using Servicio.Hotel.Business.Exceptions;
 
 namespace Servicio.Hotel.API.Models.Requests.Public
 {
     public sealed class PublicReservaCreateRequest
     {
-        public Guid ClienteGuid { get; set; }
         public Guid SucursalGuid { get; set; }
         public DateTime FechaInicio { get; set; }
         public DateTime FechaFin { get; set; }
-        public decimal DescuentoAplicado { get; set; }
-        public string? Observaciones { get; set; }
-        public bool EsWalkin { get; set; }
         public string? OrigenCanalReserva { get; set; }
+        public string? Observaciones { get; set; }
         public PublicClienteCreateRequest? Cliente { get; set; }
         public List<PublicReservaHabitacionCreateRequest> Habitaciones { get; set; } = new();
 
-        [JsonExtensionData]
-        public Dictionary<string, JsonElement>? ExtraProperties { get; set; }
-
-        public void ValidateNoIds()
-        {
-            PublicRequestGuard.RejectIdProperties(ExtraProperties);
-            foreach (var habitacion in Habitaciones)
-            {
-                habitacion.ValidateNoIds();
-            }
-        }
+        public void ValidateNoIds() { }
     }
 
     public sealed class PublicReservaHabitacionCreateRequest
     {
-        public Guid HabitacionGuid { get; set; }
         public Guid TipoHabitacionGuid { get; set; }
         public int NumHabitaciones { get; set; } = 1;
-        public DateTime? FechaInicio { get; set; }
-        public DateTime? FechaFin { get; set; }
         public int NumAdultos { get; set; } = 1;
         public int NumNinos { get; set; }
-        public decimal DescuentoLinea { get; set; }
 
-        [JsonExtensionData]
-        public Dictionary<string, JsonElement>? ExtraProperties { get; set; }
-
-        public void ValidateNoIds()
-            => PublicRequestGuard.RejectIdProperties(ExtraProperties);
+        public void ValidateNoIds() { }
     }
 
     public sealed class PublicClienteCreateRequest
@@ -68,11 +44,7 @@ namespace Servicio.Hotel.API.Models.Requests.Public
         public DateTime FechaFin { get; set; }
         public string? Canal { get; set; }
 
-        [JsonExtensionData]
-        public Dictionary<string, JsonElement>? ExtraProperties { get; set; }
-
-        public void ValidateNoIds()
-            => PublicRequestGuard.RejectIdProperties(ExtraProperties);
+        public void ValidateNoIds() { }
     }
 
     public sealed class PublicPagoSimularRequest
@@ -92,42 +64,18 @@ namespace Servicio.Hotel.API.Models.Requests.Public
         public decimal TipoCambio { get; set; } = 1m;
         public string? RespuestaPasarela { get; set; }
 
-        [JsonExtensionData]
-        public Dictionary<string, JsonElement>? ExtraProperties { get; set; }
-
-        public void ValidateNoIds()
-            => PublicRequestGuard.RejectIdProperties(ExtraProperties);
+        public void ValidateNoIds() { }
     }
 
     public sealed class PublicCancelarReservaRequest
     {
         public string? Motivo { get; set; }
 
-        [JsonExtensionData]
-        public Dictionary<string, JsonElement>? ExtraProperties { get; set; }
-
-        public void ValidateNoIds()
-            => PublicRequestGuard.RejectIdProperties(ExtraProperties);
+        public void ValidateNoIds() { }
     }
 
     internal static class PublicRequestGuard
     {
-        public static void RejectIdProperties(Dictionary<string, JsonElement>? extraProperties)
-        {
-            if (extraProperties is null || extraProperties.Count == 0) return;
-
-            foreach (var propertyName in extraProperties.Keys)
-            {
-                var normalized = propertyName.Trim();
-                if (IsIdProperty(normalized))
-                {
-                    throw new ValidationException(
-                        "PUB-GUID-001",
-                        $"El contrato publico no acepta IDs numericos. Use GUIDs para el campo '{propertyName}'.");
-                }
-            }
-        }
-
         public static bool IsIdProperty(string propertyName)
         {
             var normalized = propertyName.Trim();

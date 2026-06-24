@@ -9,6 +9,7 @@ using Servicio.Hotel.Business.Interfaces.Reservas;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Servicio.Hotel.API.Controllers.V1.Internal.Reservas
@@ -45,74 +46,85 @@ namespace Servicio.Hotel.API.Controllers.V1.Internal.Reservas
         }
 
         [HttpPost]
-        public async Task<ActionResult<ReservaDTO>> Create([FromBody] ReservaCreateRequest request)
+        public async Task<ActionResult<ReservaDTO>> Create([FromBody] InternalReservaCreateRequest request)
         {
-            var hasTipoHabitacion = request.Habitaciones.Any(h => h.TipoHabitacionGuid.HasValue && h.TipoHabitacionGuid.Value != Guid.Empty);
-            ReservaDTO result;
-
-            if (hasTipoHabitacion)
-            {
-                var idCliente = await ResolveClienteIdAsync(request);
-                var idSucursal = await ResolveSucursalIdAsync(request);
-                var dto = new ReservaPorTipoHabitacionCreateDTO
-                {
-                    IdCliente = idCliente,
-                    IdSucursal = idSucursal,
-                    FechaInicio = request.FechaInicio,
-                    FechaFin = request.FechaFin,
-                    DescuentoAplicado = request.DescuentoAplicado,
-                    OrigenCanalReserva = string.IsNullOrWhiteSpace(request.OrigenCanalReserva) ? "INTERNAL" : request.OrigenCanalReserva,
-                    Observaciones = request.Observaciones ?? string.Empty,
-                    EsWalkin = request.EsWalkin,
-                    ExigirPermiteReservaPublica = false,
-                    Habitaciones = request.Habitaciones.Select(h => new ReservaTipoHabitacionCreateDTO
-                    {
-                        TipoHabitacionGuid = h.TipoHabitacionGuid ?? Guid.Empty,
-                        NumHabitaciones = h.NumHabitaciones,
-                        NumAdultos = h.NumAdultos,
-                        NumNinos = h.NumNinos
-                    }).ToList()
-                };
-                result = await _reservaService.CreateByTipoHabitacionAsync(dto, HttpContext.RequestAborted);
-            }
-            else
-            {
-                var dto = request.ToCreateDto();
-                result = await _reservaService.CreateAsync(dto);
-            }
+            ValidateCreateRequest(request);
+            var idCliente = await ResolveClienteIdAsync(request);
+            var idSucursal = await ResolveSucursalIdAsync(request);
+            var dto = request.ToCreateDto(idCliente, idSucursal);
+            var result = await _reservaService.CreateByTipoHabitacionAsync(dto, HttpContext.RequestAborted);
 
             return CreatedAtAction(nameof(GetById), new { id = result.IdReserva }, result);
         }
 
-        private async Task<int> ResolveClienteIdAsync(ReservaCreateRequest request)
+        private async Task<int> ResolveClienteIdAsync(InternalReservaCreateRequest request)
         {
-            if (request.IdCliente > 0)
-                return request.IdCliente;
-            if (request.ClienteGuid.HasValue && request.ClienteGuid.Value != Guid.Empty)
-                return (await _clienteService.GetByGuidAsync(request.ClienteGuid.Value, HttpContext.RequestAborted)).IdCliente;
-            if (request.Cliente == null)
-                throw new ValidationException("RES-INT-CLI-001", "IdCliente, clienteGuid o cliente es obligatorio.");
+            if (request.ClienteGuid != Guid.Empty)
+                return (await _clienteService.GetByGuidAsync(request.ClienteGuid, HttpContext.RequestAborted)).IdCliente;
 
+            return (await GetOrCreateClienteAsync(request.Cliente!, HttpContext.RequestAborted)).IdCliente;
+        }
+
+        private async Task<ClienteDTO> GetOrCreateClienteAsync(ClienteCreateRequest clienteRequest, CancellationToken ct)
+        {
             try
             {
-                return (await _clienteService.GetByIdentificacionAsync(
-                    request.Cliente.TipoIdentificacion,
-                    request.Cliente.NumeroIdentificacion,
-                    HttpContext.RequestAborted)).IdCliente;
+                return await _clienteService.GetByCorreoAsync(clienteRequest.Correo, ct);
             }
             catch (NotFoundException)
             {
-                return (await _clienteService.CreateAsync(request.Cliente.ToCreateDto(), HttpContext.RequestAborted)).IdCliente;
+                try
+                {
+                    return await _clienteService.GetByIdentificacionAsync(
+                        clienteRequest.TipoIdentificacion,
+                        clienteRequest.NumeroIdentificacion,
+                        ct);
+                }
+                catch (NotFoundException)
+                {
+                    return await _clienteService.CreateAsync(clienteRequest.ToCreateDto(), ct);
+                }
             }
         }
 
-        private async Task<int> ResolveSucursalIdAsync(ReservaCreateRequest request)
+        private async Task<int> ResolveSucursalIdAsync(InternalReservaCreateRequest request)
         {
-            if (request.IdSucursal > 0)
-                return request.IdSucursal;
-            if (request.SucursalGuid.HasValue && request.SucursalGuid.Value != Guid.Empty)
-                return (await _sucursalService.GetByGuidAsync(request.SucursalGuid.Value, HttpContext.RequestAborted)).IdSucursal;
-            throw new ValidationException("RES-INT-SUC-001", "IdSucursal o sucursalGuid es obligatorio.");
+            return (await _sucursalService.GetByGuidAsync(request.SucursalGuid, HttpContext.RequestAborted)).IdSucursal;
+        }
+
+        private static void ValidateCreateRequest(InternalReservaCreateRequest request)
+        {
+            if (request == null)
+                throw new ValidationException("RES-INT-001", "El cuerpo de la reserva es obligatorio.");
+            if (request.ClienteGuid == Guid.Empty && request.Cliente == null)
+                throw new ValidationException("RES-INT-CLI-001", "clienteGuid o cliente es obligatorio.");
+            if (request.ClienteGuid == Guid.Empty && request.Cliente != null &&
+                (string.IsNullOrWhiteSpace(request.Cliente.TipoIdentificacion) ||
+                 string.IsNullOrWhiteSpace(request.Cliente.NumeroIdentificacion) ||
+                 string.IsNullOrWhiteSpace(request.Cliente.Nombres) ||
+                 string.IsNullOrWhiteSpace(request.Cliente.Correo) ||
+                 string.IsNullOrWhiteSpace(request.Cliente.Telefono)))
+                throw new ValidationException("RES-INT-CLI-002", "tipoIdentificacion, numeroIdentificacion, nombres, correo y telefono son obligatorios.");
+            if (request.SucursalGuid == Guid.Empty)
+                throw new ValidationException("RES-INT-SUC-001", "sucursalGuid es obligatorio.");
+            if (request.FechaInicio == default)
+                throw new ValidationException("RES-INT-002", "fechaInicio es obligatoria.");
+            if (request.FechaFin == default || request.FechaFin <= request.FechaInicio)
+                throw new ValidationException("RES-INT-003", "fechaFin debe ser posterior a fechaInicio.");
+            if (request.Habitaciones == null || request.Habitaciones.Count == 0)
+                throw new ValidationException("RES-INT-004", "La reserva debe incluir al menos un tipo de habitacion.");
+
+            foreach (var habitacion in request.Habitaciones)
+            {
+                if (habitacion.TipoHabitacionGuid == Guid.Empty)
+                    throw new ValidationException("RES-INT-005", "tipoHabitacionGuid es obligatorio.");
+                if (habitacion.NumHabitaciones <= 0)
+                    throw new ValidationException("RES-INT-006", "numHabitaciones debe ser mayor a cero.");
+                if (habitacion.NumAdultos <= 0)
+                    throw new ValidationException("RES-INT-007", "numAdultos debe ser mayor a cero.");
+                if (habitacion.NumNinos < 0)
+                    throw new ValidationException("RES-INT-008", "numNinos no puede ser negativo.");
+            }
         }
 
         [HttpPost("calcular-precio")]

@@ -23,5 +23,6 @@ namespace Servicio.Hotel.Business.DTOs.Reservas
         public int NumHabitaciones { get; set; }
         public int NumAdultos { get; set; }
         public int NumNinos { get; set; }
+        public decimal DescuentoLinea { get; set; }
     }
 }

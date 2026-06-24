@@ -5,7 +5,7 @@ namespace Servicio.Hotel.Business.DTOs.Seguridad
 {
     public class LoginResponseDTO
     {
-        public string AccessToken { get; set; }
+        public string Token { get; set; }
         public string RefreshToken { get; set; }
         public int ExpiresIn { get; set; }
         public int? IdCliente { get; set; }
